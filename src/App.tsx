@@ -1,16 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
 import * as API from './api/mockApi';
 import { Task } from './components/task';
 import type { ITask } from './task.type';
 
-const MAX_RETRIES = 3;
-const POLL_INTERVAL = 3000;
-
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [tasks, setTasks] = useState<ITask[]>([]);
-  const pollingRefs = useRef<Record<string, NodeJS.Timeout>>({});
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,7 +41,6 @@ export default function App() {
         file,
       };
       setTasks((prev) => [...prev, newTask]);
-      startPolling(taskId);
     } catch (err) {
       console.error('Task creation failed', err);
     }
@@ -56,54 +51,6 @@ export default function App() {
 
     setFile(null);
   };
-
-  const startPolling = (taskId: string) => {
-    let retryCount = 0;
-
-    const poll = async () => {
-      try {
-        const status = await API.getTaskStatus(taskId);
-        setTasks((prev) =>
-          prev.map((task) => (task.id === taskId ? { ...task, status } : task)),
-        );
-
-        if (status === 'pending') {
-          pollingRefs.current[taskId] = setTimeout(poll, POLL_INTERVAL);
-        } else {
-          clearTimeout(pollingRefs.current[taskId]);
-        }
-      } catch {
-        retryCount++;
-        if (retryCount <= MAX_RETRIES) {
-          pollingRefs.current[taskId] = setTimeout(poll, POLL_INTERVAL);
-        } else {
-          setTasks((prev) =>
-            prev.map((task) =>
-              task.id === taskId ? { ...task, status: 'error' } : task,
-            ),
-          );
-        }
-      }
-    };
-
-    poll();
-  };
-
-  const cancelTask = (taskId: string) => {
-    clearTimeout(pollingRefs.current[taskId]);
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId ? { ...task, status: 'cancelled' } : task,
-      ),
-    );
-  };
-
-  useEffect(() => {
-    return () => {
-      // Cancel all polling on unmount
-      Object.values(pollingRefs.current).forEach(clearTimeout);
-    };
-  }, []);
 
   return (
     <div className="max-w-xl mx-auto p-4">
@@ -126,7 +73,18 @@ export default function App() {
           <Task
             key={task.id}
             task={task}
-            onCancle={(taskId) => cancelTask(taskId)}
+            onCancel={(id) => {
+              setTasks((prev) =>
+                prev.map((t) =>
+                  t.id === id ? { ...t, status: 'cancelled' } : t,
+                ),
+              );
+            }}
+            onStatusChange={(id, status) => {
+              setTasks((prev) =>
+                prev.map((t) => (t.id === id ? { ...t, status } : t)),
+              );
+            }}
           />
         ))}
       </div>
