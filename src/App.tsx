@@ -1,14 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import * as API from './api/mockApi';
-
-interface ITask {
-  id: string;
-  name: string;
-  status: 'pending' | 'success' | 'failed' | 'cancelled' | 'error';
-  retries: number;
-  file: File;
-}
+import { Task } from './components/task';
+import type { ITask } from './task.type';
 
 const MAX_RETRIES = 3;
 const POLL_INTERVAL = 3000;
@@ -129,23 +123,11 @@ export default function App() {
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Tasks</h2>
         {tasks.map((task) => (
-          <div
+          <Task
             key={task.id}
-            className="flex items-center justify-between p-2 border rounded mb-2"
-          >
-            <div>
-              <p className="font-medium">{task.name}</p>
-              <p className="text-sm text-gray-600">Status: {task.status}</p>
-            </div>
-            {task.status === 'pending' && (
-              <button
-                className="text-red-500 text-sm"
-                onClick={() => cancelTask(task.id)}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
+            task={task}
+            onCancle={(taskId) => cancelTask(taskId)}
+          />
         ))}
       </div>
     </div>
