@@ -1,3 +1,1 @@
-# Template Component
-
-> Template for Mints Component
+# Simple Test
